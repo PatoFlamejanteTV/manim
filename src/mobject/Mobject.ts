@@ -87,28 +87,9 @@ export class Mobject {
     }
 
     add(...mobjects: Mobject[]): this {
-        const wouldCreateCycle = (parent: Mobject, child: Mobject): boolean => {
-            // Check whether `parent` appears anywhere in `child`'s subtree.
-            const stack: Mobject[] = [child];
-            const visited = new Set<Mobject>();
-            while (stack.length > 0) {
-                const cur = stack.pop()!;
-                if (cur === parent) return true;
-                if (visited.has(cur)) continue;
-                visited.add(cur);
-                for (const sm of cur.submobjects) {
-                    stack.push(sm);
-                }
-            }
-            return false;
-        };
-
         for (const mobject of mobjects) {
             if (mobject === this) {
                 throw new Error(`Cannot add a Mobject to itself. Object ID: ${this.constructor.name}`);
-            }
-            if (wouldCreateCycle(this, mobject)) {
-                throw new Error("Cannot add a Mobject that would create a cyclic family graph.");
             }
             if (!this.submobjects.includes(mobject)) {
                 this.submobjects.push(mobject);
@@ -162,12 +143,8 @@ export class Mobject {
         const currentLength = this.points.length / 3;
         if (newLength === currentLength) return this;
 
-        if (!Number.isFinite(newLength) || newLength < 0) {
-            throw new Error(`resizePoints: newLength ${newLength} must be a finite non-negative number.`);
-        }
-        newLength = Math.floor(newLength);
         if (newLength > 1000000) {
-            throw new Error(`resizePoints: newLength ${newLength} exceeds maximum allowed size (1000000).`);
+             throw new Error(`resizePoints: newLength ${newLength} exceeds maximum allowed size (1000000).`);
         }
 
         const newPoints = new Float32Array(newLength * 3);
