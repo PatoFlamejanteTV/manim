@@ -215,6 +215,7 @@ void mobject_shift(Mobject* mob, Vector3 vector) {
 }
 
 static void mobject_scale_recursive(Mobject* mob, float factor, int depth) {
+    if (!mob) return;
     if (depth > MAX_RECURSION_DEPTH) return;
 
     for (size_t i = 0; i < mob->data_len; ++i) {
