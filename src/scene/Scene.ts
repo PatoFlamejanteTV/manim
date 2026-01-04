@@ -56,10 +56,7 @@ export class Scene {
     play(...animations: AnimationLike[]) {
         if (animations.length === 0) return;
 
-        // Find max duration (ignore invalid animation runTimes)
-        const runTimeCandidates = animations
-            .map(a => a.runTime)
-
+        // Find max duration
         const runTime = Math.max(...animations.map(a => a.runTime));
 
         if (!isFinite(runTime) || runTime <= 0) {
@@ -67,27 +64,32 @@ export class Scene {
             return;
         }
 
+        // Start
         for (const anim of animations) {
             anim.begin();
+            // Ensure mobject is in scene
             this.add(anim.mobject);
         }
 
+        // Simulate loop
+        // In real app, this is requestAnimationFrame.
+        // Here we simulate with steps.
         const fps = 60;
         const dt = 1 / fps;
         let t = 0;
 
         while (t < runTime) {
-            const step = Math.min(dt, runTime - t);
-            t += step;
+            t += dt;
+            const alpha = Math.min(t / runTime, 1.0);
 
             for (const anim of animations) {
-                const animAlpha = Math.min(t / anim.runTime, 1.0);
-                anim.interpolate(animAlpha);
+                anim.interpolate(alpha);
             }
 
-            this.update(step);
+            this.update(dt);
         }
 
+        // Finish
         for (const anim of animations) {
             anim.finish();
         }

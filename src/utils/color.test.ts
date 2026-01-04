@@ -19,7 +19,7 @@ describe('Color Utils', () => {
 
         const invalid1 = hexToRgb('invalid');
         expect(invalid1).toEqual(vec3.fromValues(0, 0, 0));
-        expect(consoleSpy).toHaveBeenCalledWith('Invalid hex color string: invalid. Returning black.');
+        expect(consoleSpy).toHaveBeenCalledWith('Invalid hex color string format. Returning black.');
 
         const invalid2 = hexToRgb('#12');
         expect(invalid2).toEqual(vec3.fromValues(0, 0, 0));

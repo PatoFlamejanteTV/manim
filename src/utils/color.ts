@@ -3,11 +3,9 @@ import { vec3, vec4 } from 'gl-matrix';
 export type Color = string; // Hex string for now
 
 export function hexToRgb(hex: string): vec3 {
-    hex = hex.trim();
-
     // Validate input
     if (!/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(hex)) {
-        console.warn(`Invalid hex color string: ${hex}. Returning black.`);
+        console.warn("Invalid hex color string format. Returning black.");
         return vec3.fromValues(0, 0, 0);
     }
 
@@ -32,8 +30,9 @@ export function rgbToHex(rgb: vec3): string {
 }
 
 export function colorGradient(colors: Color[], length: number): Color[] {
-    if (length <= 0) return [];
-    if (colors.length === 0) return Array(length).fill('#000000');
+    // Simplified linear interpolation for now
+    if (length === 0) return [];
     if (length === 1) return [colors[0]];
+    // TODO: Implement proper gradient logic
     return Array(length).fill(colors[0]);
 }

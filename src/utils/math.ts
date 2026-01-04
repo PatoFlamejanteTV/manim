@@ -65,18 +65,18 @@ export function bezier(points: vec3[]): (t: number) => vec3 {
 }
 
 export function quadraticBezierPointsForArc(angle: number, nComponents: number): vec3[] {
-    nComponents = Math.max(1, Math.floor(nComponents));
+    // Simplified version: just return points on the arc for now, without perfect handle placement
+    // A real implementation needs the specific handle math from manimlib
+    // But for now, let's approximate with points on the circle
 
-    // Ensure each component arc is strictly less than PI to avoid near-infinite handles
-    const maxTheta = Math.PI - 1e-3;
-    const minComponents = Math.ceil(Math.abs(angle) / maxTheta);
-    nComponents = Math.max(nComponents, minComponents);
+    // Actually, to correctly implement VMobject, we need proper bezier handles.
+    // P0 = (1, 0)
+    // P2 = (cos(theta), sin(theta))
+    // P1 is the handle.
+    // For a circular arc, P1 is at distance 1/cos(theta/2) at angle theta/2
+
     const theta = angle / nComponents;
     const points: vec3[] = [];
-
-    // Avoid infinite handles when theta is too large
-    const denom = Math.cos(theta / 2);
-    const safeDenom = Math.abs(denom) < 1e-6 ? (denom >= 0 ? 1e-6 : -1e-6) : denom;
 
     for (let i = 0; i < nComponents; i++) {
         const startAng = i * theta;
@@ -86,7 +86,7 @@ export function quadraticBezierPointsForArc(angle: number, nComponents: number):
         const p0 = vec3.fromValues(Math.cos(startAng), Math.sin(startAng), 0);
         const p2 = vec3.fromValues(Math.cos(endAng), Math.sin(endAng), 0);
 
-        const rHandle = 1 / safeDenom;
+        const rHandle = 1 / Math.cos(theta / 2);
         const p1 = vec3.fromValues(rHandle * Math.cos(midAng), rHandle * Math.sin(midAng), 0);
 
         if (i === 0) points.push(p0);
@@ -98,28 +98,26 @@ export function quadraticBezierPointsForArc(angle: number, nComponents: number):
 }
 
 export function partialQuadraticBezierPoints(points: vec3[], a: number, b: number): vec3[] {
+    // points is [p0, p1, p2]
+    // returns [new_p0, new_p1, new_p2]
+
     const p0 = points[0];
     const p1 = points[1];
     const p2 = points[2];
-
-    // Degenerate slice: avoid division by ~0 when a ~ 1
-    const denom = 1.0 - a;
-    if (Math.abs(denom) < 1e-8) {
-        const end = b >= 1 ? p2 : bezier([p0, p1, p2])(b);
-        return [end, end, end];
-    }
 
     const curve = bezier([p0, p1, p2]);
 
     const h0 = a > 0 ? curve(a) : p0;
     const h2 = b < 1 ? curve(b) : p2;
 
+    // h1_prime = (1-a)*p1 + a*p2
     const h1Prime = vec3.create();
     vec3.scaleAndAdd(h1Prime, vec3.create(), p1, 1 - a);
     vec3.scaleAndAdd(h1Prime, h1Prime, p2, a);
 
-    const endProp = (b - a) / denom;
+    const endProp = (b - a) / (1.0 - a);
 
+    // h1 = (1-endProp)*h0 + endProp*h1Prime
     const h1 = vec3.create();
     vec3.scaleAndAdd(h1, vec3.create(), h0, 1 - endProp);
     vec3.scaleAndAdd(h1, h1, h1Prime, endProp);

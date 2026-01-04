@@ -27,8 +27,12 @@ export class Arc extends VMobject {
         const radius = options.radius !== undefined ? options.radius : 1.0;
         const arcCenter = options.arcCenter || ORIGIN;
 
+        if (radius <= 0) throw new Error("Arc radius must be positive");
+
         // Approximate nComponents if not provided
         const nComponents = options.nComponents || Math.ceil(8 * Math.abs(angle) / TAU) || 1;
+
+        if (nComponents <= 0) throw new Error("Arc nComponents must be positive");
 
         const points = quadraticBezierPointsForArc(angle, nComponents);
 
@@ -107,6 +111,9 @@ export class Rectangle extends VMobject {
         const width = options.width || 4.0;
         const height = options.height || 2.0;
 
+        if (width <= 0) throw new Error("Rectangle width must be positive");
+        if (height <= 0) throw new Error("Rectangle height must be positive");
+
         const w2 = width / 2;
         const h2 = height / 2;
 
@@ -143,6 +150,7 @@ export class Square extends Rectangle {
         fillOpacity?: number
     } = {}) {
         const side = options.sideLength || 2.0;
+        if (side <= 0) throw new Error("Square side length must be positive");
         super({
             width: side,
             height: side,
