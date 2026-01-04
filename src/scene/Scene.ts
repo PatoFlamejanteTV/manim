@@ -59,41 +59,35 @@ export class Scene {
         // Find max duration (ignore invalid animation runTimes)
         const runTimeCandidates = animations
             .map(a => a.runTime)
-            .filter(rt => Number.isFinite(rt) && rt > 0);
 
-        const runTime = runTimeCandidates.length > 0 ? Math.max(...runTimeCandidates) : NaN;
+        const runTime = Math.max(...animations.map(a => a.runTime));
 
-        if (!Number.isFinite(runTime) || runTime <= 0) {
-            console.warn(`Scene.play: runTime is invalid (${runTime}). Skipping animation.`);
+        if (!isFinite(runTime) || runTime <= 0) {
+            console.warn("Scene.play: runTime is invalid (0, negative, or infinite). Skipping animation.");
             return;
         }
 
-        // Start
         for (const anim of animations) {
             anim.begin();
-            // Ensure mobject is in scene
             this.add(anim.mobject);
         }
 
-        // Simulate loop
-        // In real app, this is requestAnimationFrame.
-        // Here we simulate with steps.
         const fps = 60;
         const dt = 1 / fps;
         let t = 0;
 
         while (t < runTime) {
-            t += dt;
-            const alpha = Math.min(t / runTime, 1.0);
+            const step = Math.min(dt, runTime - t);
+            t += step;
 
             for (const anim of animations) {
-                anim.interpolate(alpha);
+                const animAlpha = Math.min(t / anim.runTime, 1.0);
+                anim.interpolate(animAlpha);
             }
 
-            this.update(dt);
+            this.update(step);
         }
 
-        // Finish
         for (const anim of animations) {
             anim.finish();
         }
