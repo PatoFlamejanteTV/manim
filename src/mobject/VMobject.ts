@@ -164,6 +164,10 @@ export class VMobject extends Mobject {
     }
 
     getNthCurvePoints(n: number): vec3[] {
+        const numCurves = this.getNumCurves();
+        if (!Number.isInteger(n) || n < 0 || n >= numCurves) {
+            throw new Error(`getNthCurvePoints: curve index ${n} out of range (0..${Math.max(0, numCurves - 1)})`);
+        }
         const points = this.getPoints();
         return [
             points[2 * n],
