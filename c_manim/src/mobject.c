@@ -200,8 +200,9 @@ int mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
         mob->data[i].point = points[i];
     }
     return 1;
-}
-
+static void mobject_shift_recursive(Mobject* mob, Vector3 vector, int depth) {
+    if (!mob) return;
+    if (depth > MAX_RECURSION_DEPTH) return;
 int mobject_add_point(Mobject* mob, Vector3 point) {
     if (!mob) return 0;
     if (!ensure_data_capacity(mob, mob->data_len + 1)) return 0;
