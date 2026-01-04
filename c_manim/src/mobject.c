@@ -114,17 +114,32 @@ void mobject_free(Mobject* mob) {
 int mobject_add(Mobject* parent, Mobject* child) {
     if (!parent || !child) return 0;
 
-    // Check if already added
+    bool in_parent = false;
     for (size_t i = 0; i < parent->sub_len; ++i) {
-        if (parent->submobjects[i] == child) return 1; // Already added is success? Yes, idempotent.
+        if (parent->submobjects[i] == child) {
+            in_parent = true;
+            break;
+        }
     }
 
-    if (!ensure_sub_capacity(parent, parent->sub_len + 1)) return 0;
-    if (!ensure_parents_capacity(child, child->parents_len + 1)) return 0;
+    bool in_child = false;
+    for (size_t i = 0; i < child->parents_len; ++i) {
+        if (child->parents[i] == parent) {
+            in_child = true;
+            break;
+        }
+    }
 
-    parent->submobjects[parent->sub_len++] = child;
-    child->parents[child->parents_len++] = parent;
+    if (in_parent && in_child) return 1;
 
+    if (!in_parent) {
+        if (!ensure_sub_capacity(parent, parent->sub_len + 1)) return 0;
+        parent->submobjects[parent->sub_len++] = child;
+    }
+    if (!in_child) {
+        if (!ensure_parents_capacity(child, child->parents_len + 1)) return 0;
+        child->parents[child->parents_len++] = parent;
+    }
     return 1;
 }
 
