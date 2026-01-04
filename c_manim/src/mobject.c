@@ -9,7 +9,12 @@ static void ensure_data_capacity(Mobject* mob, size_t min_cap) {
     if (mob->data_cap >= min_cap) return;
     size_t new_cap = mob->data_cap == 0 ? 8 : mob->data_cap * 2;
     if (new_cap < min_cap) new_cap = min_cap;
-    mob->data = realloc(mob->data, new_cap * sizeof(PointData));
+    PointData *tmp = realloc(mob->data, new_cap * sizeof(PointData));
+    if (!tmp) {
+        fprintf(stderr, "Out of memory in ensure_data_capacity\n");
+        exit(EXIT_FAILURE);
+    }
+    mob->data = tmp;
     mob->data_cap = new_cap;
 }
 
