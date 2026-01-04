@@ -143,6 +143,10 @@ export class Mobject {
         const currentLength = this.points.length / 3;
         if (newLength === currentLength) return this;
 
+        if (newLength > 1000000) {
+             throw new Error(`resizePoints: newLength ${newLength} exceeds maximum allowed size (1000000).`);
+        }
+
         const newPoints = new Float32Array(newLength * 3);
         const newRgbas = new Float32Array(newLength * 4);
 
