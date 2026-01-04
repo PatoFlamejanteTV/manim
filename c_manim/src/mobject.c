@@ -270,13 +270,17 @@ static void mobject_rotate_recursive(Mobject* mob, float angle, Vector3 axis, in
         float dot = vec3_dot(k, v);
 
         Vector3 term1 = vec3_scale(v, cos_t);
-        Vector3 term2 = vec3_scale(cross, sin_t);
-        Vector3 term3 = vec3_scale(k, dot * (1 - cos_t));
+        static void mobject_set_color_recursive(Mobject* mob, Color color, int depth) {
+            if (!mob) return;
+            if (depth > MAX_RECURSION_DEPTH) return;
 
-        mob->data[i].point = vec3_add(term1, vec3_add(term2, term3));
-    }
+            // Keep opacity authoritative; apply RGB while preserving alpha
+            mob->color = (Color){color.r, color.g, color.b, mob->opacity};
 
-    for (size_t i = 0; i < mob->sub_len; ++i) {
+            for (size_t i = 0; i < mob->data_len; ++i) {
+                float a = mob->data[i].color.a;
+                mob->data[i].color = (Color){color.r, color.g, color.b, a};
+            }
         mobject_rotate_recursive(mob->submobjects[i], angle, axis, depth + 1);
     }
 }
