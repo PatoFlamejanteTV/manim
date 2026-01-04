@@ -72,17 +72,19 @@ export class Scene {
         }
 
         // Simulate loop
-        // In real app, this is requestAnimationFrame.
-        // Here we simulate with steps.
         const fps = 60;
-        const dt = 1 / fps;
+        const baseDt = 1 / fps;
         let t = 0;
 
         while (t < runTime) {
+            const dt = Math.min(baseDt, runTime - t);
             t += dt;
-            const alpha = Math.min(t / runTime, 1.0);
 
             for (const anim of animations) {
+                const animRunTime = anim.runTime;
+                const alpha = (!isFinite(animRunTime) || animRunTime <= 0)
+                    ? 1.0
+                    : Math.min(t / animRunTime, 1.0);
                 anim.interpolate(alpha);
             }
 
