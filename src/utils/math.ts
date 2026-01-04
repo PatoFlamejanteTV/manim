@@ -102,6 +102,9 @@ export function partialQuadraticBezierPoints(points: vec3[], a: number, b: numbe
     // returns [new_p0, new_p1, new_p2]
     if (points.length < 3) return [];
 
+    if (!Number.isFinite(a) || !Number.isFinite(b)) {
+        throw new Error("partialQuadraticBezierPoints: expected finite a and b");
+    }
     a = Math.max(0, Math.min(1, a));
     b = Math.max(0, Math.min(1, b));
     if (b < a) {
