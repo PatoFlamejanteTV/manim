@@ -65,28 +65,20 @@ export function bezier(points: vec3[]): (t: number) => vec3 {
 }
 
 export function quadraticBezierPointsForArc(angle: number, nComponents: number): vec3[] {
-    if (!Number.isFinite(angle)) {
-        return [];
-    }
-    if (!Number.isInteger(nComponents) || nComponents <= 0) {
-        throw new Error("nComponents must be a positive integer");
-    }
+    // Simplified version: just return points on the arc for now, without perfect handle placement
+    // A real implementation needs the specific handle math from manimlib
+    // But for now, let's approximate with points on the circle
 
-    // Ensure each component is below π to avoid cos(theta/2) ≈ 0
-    let safeComponents = nComponents;
-    while (Math.abs(angle / safeComponents) >= Math.PI) {
-        safeComponents *= 2;
-    }
+    // Actually, to correctly implement VMobject, we need proper bezier handles.
+    // P0 = (1, 0)
+    // P2 = (cos(theta), sin(theta))
+    // P1 is the handle.
+    // For a circular arc, P1 is at distance 1/cos(theta/2) at angle theta/2
 
-    const theta = angle / safeComponents;
-    const cosHalf = Math.cos(theta / 2);
-    if (Math.abs(cosHalf) < 1e-6) {
-        throw new Error("Arc segment too large; increase nComponents");
-    }
-
+    const theta = angle / nComponents;
     const points: vec3[] = [];
 
-    for (let i = 0; i < safeComponents; i++) {
+    for (let i = 0; i < nComponents; i++) {
         const startAng = i * theta;
         const endAng = (i + 1) * theta;
         const midAng = (startAng + endAng) / 2;
@@ -94,7 +86,7 @@ export function quadraticBezierPointsForArc(angle: number, nComponents: number):
         const p0 = vec3.fromValues(Math.cos(startAng), Math.sin(startAng), 0);
         const p2 = vec3.fromValues(Math.cos(endAng), Math.sin(endAng), 0);
 
-        const rHandle = 1 / cosHalf;
+        const rHandle = 1 / Math.cos(theta / 2);
         const p1 = vec3.fromValues(rHandle * Math.cos(midAng), rHandle * Math.sin(midAng), 0);
 
         if (i === 0) points.push(p0);
