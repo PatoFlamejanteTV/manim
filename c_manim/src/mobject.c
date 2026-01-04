@@ -176,9 +176,11 @@ void mobject_clear(Mobject* parent) {
 int mobject_resize_points(Mobject* mob, size_t new_len) {
     if (!mob) return 0;
     if (!ensure_data_capacity(mob, new_len)) return 0;
+int mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
+    if (!mob) return 0;
+    if (count > 0 && !points) return 0;
 
-    if (new_len > mob->data_len) {
-        // Init new points
+    if (!mobject_resize_points(mob, count)) return 0;
         memset(&mob->data[mob->data_len], 0, (new_len - mob->data_len) * sizeof(PointData));
 
         // Use default color
