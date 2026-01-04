@@ -34,6 +34,10 @@ export function colorGradient(colors: Color[], length: number): Color[] {
     if (!Number.isFinite(length) || length <= 0) {
         return [];
     }
+    // Validate inputs
+    if (!Number.isFinite(length) || length <= 0) {
+        return [];
+    }
     length = Math.floor(length);
     if (length > 10000) {
         // Arbitrary limit to prevent resource exhaustion
