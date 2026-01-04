@@ -51,13 +51,10 @@ export class VMobject extends Mobject {
 
     startNewPath(point: vec3): this {
         if (this.getNumPoints() > 0) {
-            // If we already have points, we need to handle the discontinuity.
-            // In Manim, this is often handled by adding a duplicate point or careful indexing.
-            // For this port, let's assume `points` is a continuous list of bezier anchors/handles.
-            // A new path might mean we need a separate structure or a "move to" command.
-            // Manim uses handle sitting on top of anchor to signal break.
             const last = this.getLastPoint();
-            this.addPoints([last, point]);
+            // Preserve quadratic point layout: ... A, H, A, H, A
+            // Add a degenerate curve (A -> A) to mark discontinuity, then new anchor.
+            this.addPoints([last, last, point]);
         } else {
             this.setPoints([point]);
         }
