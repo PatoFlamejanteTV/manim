@@ -4,17 +4,20 @@
 #include <string.h>
 #include <math.h>
 
+#define MAX_RECURSION_DEPTH 100
+
 // Helpers
 static void ensure_data_capacity(Mobject* mob, size_t min_cap) {
     if (mob->data_cap >= min_cap) return;
     size_t new_cap = mob->data_cap == 0 ? 8 : mob->data_cap * 2;
     if (new_cap < min_cap) new_cap = min_cap;
-    PointData *tmp = realloc(mob->data, new_cap * sizeof(PointData));
-    if (!tmp) {
-        fprintf(stderr, "Out of memory in ensure_data_capacity\n");
-        exit(EXIT_FAILURE);
+
+    void* temp = realloc(mob->data, new_cap * sizeof(PointData));
+    if (!temp) {
+        fprintf(stderr, "Failed to allocate memory for points\n");
+        exit(1);
     }
-    mob->data = tmp;
+    mob->data = temp;
     mob->data_cap = new_cap;
 }
 
@@ -22,7 +25,13 @@ static void ensure_sub_capacity(Mobject* mob, size_t min_cap) {
     if (mob->sub_cap >= min_cap) return;
     size_t new_cap = mob->sub_cap == 0 ? 4 : mob->sub_cap * 2;
     if (new_cap < min_cap) new_cap = min_cap;
-    mob->submobjects = realloc(mob->submobjects, new_cap * sizeof(Mobject*));
+
+    void* temp = realloc(mob->submobjects, new_cap * sizeof(Mobject*));
+    if (!temp) {
+        fprintf(stderr, "Failed to allocate memory for submobjects\n");
+        exit(1);
+    }
+    mob->submobjects = temp;
     mob->sub_cap = new_cap;
 }
 
@@ -30,7 +39,13 @@ static void ensure_parents_capacity(Mobject* mob, size_t min_cap) {
     if (mob->parents_cap >= min_cap) return;
     size_t new_cap = mob->parents_cap == 0 ? 2 : mob->parents_cap * 2;
     if (new_cap < min_cap) new_cap = min_cap;
-    mob->parents = realloc(mob->parents, new_cap * sizeof(Mobject*));
+
+    void* temp = realloc(mob->parents, new_cap * sizeof(Mobject*));
+    if (!temp) {
+        fprintf(stderr, "Failed to allocate memory for parents\n");
+        exit(1);
+    }
+    mob->parents = temp;
     mob->parents_cap = new_cap;
 }
 
@@ -47,11 +62,6 @@ Mobject* mobject_create() {
 void mobject_free(Mobject* mob) {
     if (!mob) return;
 
-    // We do not free submobjects automatically because they might be shared or managed elsewhere
-    // But in a strict tree, we might want to.
-    // For now, let's assume the user handles it or we need a specific "destroy_tree" function.
-    // However, to prevent leaks in tests, we should probably just free data arrays.
-
     if (mob->data) free(mob->data);
     if (mob->submobjects) free(mob->submobjects);
     if (mob->parents) free(mob->parents);
@@ -61,6 +71,7 @@ void mobject_free(Mobject* mob) {
 
 void mobject_add(Mobject* parent, Mobject* child) {
     if (!parent || !child) return;
+
     // Check if already added
     for (size_t i = 0; i < parent->sub_len; ++i) {
         if (parent->submobjects[i] == child) return;
@@ -74,6 +85,8 @@ void mobject_add(Mobject* parent, Mobject* child) {
 }
 
 void mobject_remove(Mobject* parent, Mobject* child) {
+    if (!parent || !child) return;
+
     // Remove from parent->submobjects
     for (size_t i = 0; i < parent->sub_len; ++i) {
         if (parent->submobjects[i] == child) {
@@ -95,17 +108,17 @@ void mobject_remove(Mobject* parent, Mobject* child) {
 }
 
 void mobject_clear(Mobject* parent) {
+    if (!parent) return;
     while (parent->sub_len > 0) {
         mobject_remove(parent, parent->submobjects[0]);
     }
 }
 
 void mobject_resize_points(Mobject* mob, size_t new_len) {
+    if (!mob) return;
     ensure_data_capacity(mob, new_len);
     if (new_len > mob->data_len) {
         // Init new points
-        // In python manim, it defaults to previous point, but here we'll just zero or keep trash for now unless we carefully copy
-        // Let's zero them to be safe
         memset(&mob->data[mob->data_len], 0, (new_len - mob->data_len) * sizeof(PointData));
 
         // Use default color
@@ -118,6 +131,7 @@ void mobject_resize_points(Mobject* mob, size_t new_len) {
 }
 
 void mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
+    if (!mob || !points) return;
     mobject_resize_points(mob, count);
     for (size_t i = 0; i < count; ++i) {
         mob->data[i].point = points[i];
@@ -125,6 +139,7 @@ void mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
 }
 
 void mobject_add_point(Mobject* mob, Vector3 point) {
+    if (!mob) return;
     ensure_data_capacity(mob, mob->data_len + 1);
     mob->data[mob->data_len].point = point;
     mob->data[mob->data_len].color = mob->color;
@@ -132,29 +147,44 @@ void mobject_add_point(Mobject* mob, Vector3 point) {
     mob->data_len++;
 }
 
+// Recursive helpers with depth check
 
-void mobject_shift(Mobject* mob, Vector3 vector) {
+static void mobject_shift_recursive(Mobject* mob, Vector3 vector, int depth) {
+    if (depth > MAX_RECURSION_DEPTH) return;
+
     for (size_t i = 0; i < mob->data_len; ++i) {
         mob->data[i].point = vec3_add(mob->data[i].point, vector);
     }
     for (size_t i = 0; i < mob->sub_len; ++i) {
-        mobject_shift(mob->submobjects[i], vector);
+        mobject_shift_recursive(mob->submobjects[i], vector, depth + 1);
     }
 }
 
-void mobject_scale(Mobject* mob, float factor) {
-    // Scaling about origin for now
+void mobject_shift(Mobject* mob, Vector3 vector) {
+    if (!mob) return;
+    mobject_shift_recursive(mob, vector, 0);
+}
+
+static void mobject_scale_recursive(Mobject* mob, float factor, int depth) {
+    if (depth > MAX_RECURSION_DEPTH) return;
+
     for (size_t i = 0; i < mob->data_len; ++i) {
         mob->data[i].point = vec3_scale(mob->data[i].point, factor);
     }
     for (size_t i = 0; i < mob->sub_len; ++i) {
-        mobject_scale(mob->submobjects[i], factor);
+        mobject_scale_recursive(mob->submobjects[i], factor, depth + 1);
     }
 }
 
-void mobject_rotate(Mobject* mob, float angle, Vector3 axis) {
+void mobject_scale(Mobject* mob, float factor) {
+    if (!mob) return;
+    mobject_scale_recursive(mob, factor, 0);
+}
+
+static void mobject_rotate_recursive(Mobject* mob, float angle, Vector3 axis, int depth) {
+    if (depth > MAX_RECURSION_DEPTH) return;
+
     // Axis angle rotation about origin
-    // v' = v cos(theta) + (k x v) sin(theta) + k(k.v)(1 - cos(theta))
     Vector3 k = vec3_normalize(axis);
     float cos_t = cosf(angle);
     float sin_t = sinf(angle);
@@ -179,31 +209,54 @@ void mobject_rotate(Mobject* mob, float angle, Vector3 axis) {
     }
 
     for (size_t i = 0; i < mob->sub_len; ++i) {
-        mobject_rotate(mob->submobjects[i], angle, axis);
+        mobject_rotate_recursive(mob->submobjects[i], angle, axis, depth + 1);
     }
 }
 
-void mobject_set_color(Mobject* mob, Color color) {
+void mobject_rotate(Mobject* mob, float angle, Vector3 axis) {
+    if (!mob) return;
+    mobject_rotate_recursive(mob, angle, axis, 0);
+}
+
+static void mobject_set_color_recursive(Mobject* mob, Color color, int depth) {
+    if (depth > MAX_RECURSION_DEPTH) return;
+
     mob->color = color;
     for (size_t i = 0; i < mob->data_len; ++i) {
         mob->data[i].color = color;
     }
     for (size_t i = 0; i < mob->sub_len; ++i) {
-        mobject_set_color(mob->submobjects[i], color);
+        mobject_set_color_recursive(mob->submobjects[i], color, depth + 1);
     }
 }
 
-void mobject_set_opacity(Mobject* mob, float opacity) {
+void mobject_set_color(Mobject* mob, Color color) {
+    if (!mob) return;
+    mobject_set_color_recursive(mob, color, 0);
+}
+
+static void mobject_set_opacity_recursive(Mobject* mob, float opacity, int depth) {
+    if (depth > MAX_RECURSION_DEPTH) return;
+
     mob->opacity = opacity;
     for (size_t i = 0; i < mob->data_len; ++i) {
         mob->data[i].color.a = opacity;
     }
     for (size_t i = 0; i < mob->sub_len; ++i) {
-        mobject_set_opacity(mob->submobjects[i], opacity);
+        mobject_set_opacity_recursive(mob->submobjects[i], opacity, depth + 1);
     }
 }
 
+void mobject_set_opacity(Mobject* mob, float opacity) {
+    if (!mob) return;
+    mobject_set_opacity_recursive(mob, opacity, 0);
+}
+
 void print_mobject_info(Mobject* mob) {
+    if (!mob) {
+        printf("Mobject is NULL\n");
+        return;
+    }
     printf("Mobject at %p\n", (void*)mob);
     printf("  Points: %zu\n", mob->data_len);
     for (size_t i = 0; i < mob->data_len; ++i) {
