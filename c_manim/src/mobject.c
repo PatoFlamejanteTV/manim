@@ -298,6 +298,8 @@ static void mobject_set_opacity_recursive(Mobject* mob, float opacity, int depth
 
 void mobject_set_opacity(Mobject* mob, float opacity) {
     if (!mob) return;
+    if (opacity < 0.0f) opacity = 0.0f;
+    if (opacity > 1.0f) opacity = 1.0f;
     mobject_set_opacity_recursive(mob, opacity, 0);
 }
 
