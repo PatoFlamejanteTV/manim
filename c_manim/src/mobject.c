@@ -55,6 +55,7 @@ void mobject_free(Mobject* mob) {
 }
 
 void mobject_add(Mobject* parent, Mobject* child) {
+    if (!parent || !child) return;
     // Check if already added
     for (size_t i = 0; i < parent->sub_len; ++i) {
         if (parent->submobjects[i] == child) return;
