@@ -100,6 +100,13 @@ export function quadraticBezierPointsForArc(angle: number, nComponents: number):
 export function partialQuadraticBezierPoints(points: vec3[], a: number, b: number): vec3[] {
     // points is [p0, p1, p2]
     // returns [new_p0, new_p1, new_p2]
+    if (points.length < 3) return [];
+
+    a = Math.max(0, Math.min(1, a));
+    b = Math.max(0, Math.min(1, b));
+    if (b < a) {
+        throw new Error("partialQuadraticBezierPoints: expected b >= a");
+    }
 
     const p0 = points[0];
     const p1 = points[1];
@@ -107,9 +114,19 @@ export function partialQuadraticBezierPoints(points: vec3[], a: number, b: numbe
 
     const curve = bezier([p0, p1, p2]);
 
+    // Degenerate slice (single point)
+    if (a === b) {
+        const p = curve(a);
+        return [p, p, p];
+    }
+
     const h0 = a > 0 ? curve(a) : p0;
     const h2 = b < 1 ? curve(b) : p2;
 
+    // If a is 1, the interval must be empty or invalid; avoid (1-a)=0 division.
+    if (a >= 1) {
+        return [p2, p2, p2];
+    }
     // h1_prime = (1-a)*p1 + a*p2
     const h1Prime = vec3.create();
     vec3.scaleAndAdd(h1Prime, vec3.create(), p1, 1 - a);
