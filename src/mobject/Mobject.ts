@@ -143,8 +143,12 @@ export class Mobject {
         const currentLength = this.points.length / 3;
         if (newLength === currentLength) return this;
 
+        if (!Number.isFinite(newLength) || newLength < 0) {
+            throw new Error(`resizePoints: newLength ${newLength} must be a finite non-negative number.`);
+        }
+        newLength = Math.floor(newLength);
         if (newLength > 1000000) {
-             throw new Error(`resizePoints: newLength ${newLength} exceeds maximum allowed size (1000000).`);
+            throw new Error(`resizePoints: newLength ${newLength} exceeds maximum allowed size (1000000).`);
         }
 
         const newPoints = new Float32Array(newLength * 3);
