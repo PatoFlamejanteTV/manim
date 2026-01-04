@@ -89,6 +89,12 @@ export class Mobject {
     add(...mobjects: Mobject[]): this {
         for (const mobject of mobjects) {
             if (mobject === this) throw new Error("Mobject cannot contain self");
+
+            // Prevent cycles (adding an ancestor as a child)
+            if (mobject.getFamily(true).includes(this)) {
+                throw new Error("Mobject cannot create cyclic family relationships");
+            }
+
             if (!this.submobjects.includes(mobject)) {
                 this.submobjects.push(mobject);
             }
