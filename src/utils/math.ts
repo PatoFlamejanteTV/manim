@@ -67,6 +67,10 @@ export function bezier(points: vec3[]): (t: number) => vec3 {
 export function quadraticBezierPointsForArc(angle: number, nComponents: number): vec3[] {
     nComponents = Math.max(1, Math.floor(nComponents));
 
+    // Ensure each component arc is strictly less than PI to avoid near-infinite handles
+    const maxTheta = Math.PI - 1e-3;
+    const minComponents = Math.ceil(Math.abs(angle) / maxTheta);
+    nComponents = Math.max(nComponents, minComponents);
     const theta = angle / nComponents;
     const points: vec3[] = [];
 
