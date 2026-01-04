@@ -108,9 +108,8 @@ export class Rectangle extends VMobject {
         strokeWidth?: number
     } = {}) {
         super(options);
-        const width = options.width || 4.0;
-        const height = options.height || 2.0;
-
+        const width = options.width ?? 4.0;
+        const height = options.height ?? 2.0;
         if (width <= 0) throw new Error("Rectangle width must be positive");
         if (height <= 0) throw new Error("Rectangle height must be positive");
 
