@@ -57,14 +57,17 @@ export class Scene {
         if (animations.length === 0) return;
 
         // Find max duration
-        const runTime = Math.max(...animations.map(a => a.runTime));
-
         const MAX_RUNTIME = 300; // 5 minutes limit to prevent DoS
-        const validAnimations = animations.filter(a => Number.isFinite(a.runTime) && a.runTime > 0 && a.runTime <= MAX_RUNTIME);
+        const validAnimations = animations.filter(
+            a => Number.isFinite(a.runTime) && a.runTime > 0 && a.runTime <= MAX_RUNTIME
+        );
         if (validAnimations.length === 0) {
             console.warn(`Scene.play: no valid animations (each runTime must be 0 < t <= ${MAX_RUNTIME}). Skipping.`);
             return;
         }
+
+        // Find max duration (after validation)
+        const runTime = Math.max(...validAnimations.map(a => a.runTime));
 
         // Start
         for (const anim of animations) {
