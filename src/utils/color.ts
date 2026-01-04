@@ -32,9 +32,8 @@ export function rgbToHex(rgb: vec3): string {
 }
 
 export function colorGradient(colors: Color[], length: number): Color[] {
-    // Simplified linear interpolation for now
-    if (length === 0) return [];
+    if (length <= 0) return [];
+    if (colors.length === 0) return Array(length).fill('#000000');
     if (length === 1) return [colors[0]];
-    // TODO: Implement proper gradient logic
     return Array(length).fill(colors[0]);
 }
