@@ -56,11 +56,15 @@ export class Scene {
     play(...animations: AnimationLike[]) {
         if (animations.length === 0) return;
 
-        // Find max duration
-        const runTime = Math.max(...animations.map(a => a.runTime));
+        // Find max duration (ignore invalid animation runTimes)
+        const runTimeCandidates = animations
+            .map(a => a.runTime)
+            .filter(rt => Number.isFinite(rt) && rt > 0);
 
-        if (!isFinite(runTime) || runTime <= 0) {
-            console.warn("Scene.play: runTime is invalid (0, negative, or infinite). Skipping animation.");
+        const runTime = runTimeCandidates.length > 0 ? Math.max(...runTimeCandidates) : NaN;
+
+        if (!Number.isFinite(runTime) || runTime <= 0) {
+            console.warn(`Scene.play: runTime is invalid (${runTime}). Skipping animation.`);
             return;
         }
 
