@@ -176,10 +176,7 @@ export class VMobject extends Mobject {
         const numCurves = this.getNumCurves();
         if (numCurves === 0) return vec3.create();
 
-        // Find which curve alpha falls into
-        // Simplification: assume uniform distribution of alpha along curves
-        // Real Manim uses arc length parameterization
-
+        alpha = Math.max(0, Math.min(1, alpha));
         const val = alpha * numCurves;
         let curveIdx = Math.floor(val);
         let subAlpha = val % 1;
