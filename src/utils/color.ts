@@ -33,8 +33,6 @@ export function colorGradient(colors: Color[], length: number): Color[] {
     // Validate inputs
     if (!Number.isFinite(length) || length <= 0) {
         return [];
-    }
-    // Validate inputs
     if (!Number.isFinite(length) || length <= 0) {
         return [];
     }
