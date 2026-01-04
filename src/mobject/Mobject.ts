@@ -145,20 +145,25 @@ export class Mobject {
 
         if (newLength > 1000000) {
              throw new Error(`resizePoints: newLength ${newLength} exceeds maximum allowed size (1000000).`);
-        }
 
-        const newPoints = new Float32Array(newLength * 3);
-        const newRgbas = new Float32Array(newLength * 4);
-
-        // Very basic resizing: copy existing, fill rest with last value or 0
-        if (currentLength > 0) {
-            const copyLen = Math.min(currentLength, newLength);
+        const copyLen = Math.min(currentLength, newLength);
+        if (copyLen > 0) {
             newPoints.set(this.points.subarray(0, copyLen * 3));
             newRgbas.set(this.rgbas.subarray(0, copyLen * 4));
+        }
 
-            // If expanding, replicate last point
-            if (newLength > currentLength) {
-               // ... (omitted complex resizing logic for now)
+        if (newLength > currentLength) {
+            // Replicate last point/rgba so new points aren't "invisible" (alpha=0).
+            const lastPoint = currentLength > 0
+                ? this.points.subarray((currentLength - 1) * 3, currentLength * 3)
+                : new Float32Array([0, 0, 0]);
+            const lastRgba = currentLength > 0
+                ? this.rgbas.subarray((currentLength - 1) * 4, currentLength * 4)
+                : new Float32Array([...hexToRgb(this.color), this.opacity]);
+
+            for (let i = currentLength; i < newLength; i++) {
+                newPoints.set(lastPoint, i * 3);
+                newRgbas.set(lastRgba, i * 4);
             }
         }
 
@@ -172,6 +177,12 @@ export class Mobject {
         this.resizePoints(points.length);
         for (let i = 0; i < points.length; i++) {
             this.points[i * 3] = points[i][0];
+            this.points[i * 3 + 1] = points[i][1];
+            this.points[i * 3 + 2] = points[i][2];
+        }
+        // Ensure color/opacity is synced to the resized `rgbas` buffer.
+        this.setColor(this.color, this.opacity);
+        this.needsNewBoundingBox = true;
             this.points[i * 3 + 1] = points[i][1];
             this.points[i * 3 + 2] = points[i][2];
         }
