@@ -57,7 +57,7 @@ export class VMobject extends Mobject {
             // A new path might mean we need a separate structure or a "move to" command.
             // Manim uses handle sitting on top of anchor to signal break.
             const last = this.getLastPoint();
-            this.addPoints([last, point]);
+            this.addPoints([last, last, point]);
         } else {
             this.setPoints([point]);
         }
