@@ -62,13 +62,15 @@ void test_mobject_points() {
     Mobject* mob = mobject_create();
 
     Vector3 p1 = {1, 0, 0};
-    mobject_add_point(mob, p1);
+    int res = mobject_add_point(mob, p1);
+    ASSERT_EQ(res, 1);
 
     ASSERT_EQ(mob->data_len, 1);
     ASSERT_VEC3_EQ(mob->data[0].point, p1);
 
     Vector3 pts[] = {{0, 1, 0}, {0, 0, 1}};
-    mobject_set_points(mob, pts, 2);
+    res = mobject_set_points(mob, pts, 2);
+    ASSERT_EQ(res, 1);
 
     ASSERT_EQ(mob->data_len, 2);
     ASSERT_VEC3_EQ(mob->data[0].point, pts[0]);
@@ -84,12 +86,14 @@ void test_mobject_hierarchy() {
     Mobject* child1 = mobject_create();
     Mobject* child2 = mobject_create();
 
-    mobject_add(parent, child1);
+    int res = mobject_add(parent, child1);
+    ASSERT_EQ(res, 1);
     ASSERT_EQ(parent->sub_len, 1);
     ASSERT_EQ(child1->parents_len, 1);
     ASSERT_EQ(child1->parents[0], parent);
 
-    mobject_add(parent, child2);
+    res = mobject_add(parent, child2);
+    ASSERT_EQ(res, 1);
     ASSERT_EQ(parent->sub_len, 2);
 
     mobject_remove(parent, child1);
@@ -102,6 +106,25 @@ void test_mobject_hierarchy() {
     mobject_free(child2);
     printf("Mobject Hierarchy Passed.\n");
 }
+
+void test_mobject_free_detach() {
+    printf("Testing Mobject Free Detach...\n");
+    Mobject* parent = mobject_create();
+    Mobject* child = mobject_create();
+
+    mobject_add(parent, child);
+    ASSERT_EQ(parent->sub_len, 1);
+    ASSERT_EQ(child->parents_len, 1);
+
+    // Freeing child should remove it from parent
+    mobject_free(child);
+
+    ASSERT_EQ(parent->sub_len, 0);
+
+    mobject_free(parent);
+    printf("Mobject Free Detach Passed.\n");
+}
+
 
 void test_mobject_transform() {
     printf("Testing Mobject Transform...\n");
@@ -181,6 +204,7 @@ int main() {
     test_mobject_lifecycle();
     test_mobject_points();
     test_mobject_hierarchy();
+    test_mobject_free_detach(); // New test
     test_mobject_transform();
     test_hierarchy_transform();
     test_color_opacity();

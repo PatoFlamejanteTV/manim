@@ -80,14 +80,16 @@ Mobject* mobject_create();
 void mobject_free(Mobject* mob);
 
 // Mobject Hierarchy
-void mobject_add(Mobject* parent, Mobject* child);
+// Returns 1 on success, 0 on failure (e.g. allocation error or invalid input)
+int mobject_add(Mobject* parent, Mobject* child);
 void mobject_remove(Mobject* parent, Mobject* child);
 void mobject_clear(Mobject* parent);
 
 // Mobject Data/Points
-void mobject_set_points(Mobject* mob, Vector3* points, size_t count);
-void mobject_add_point(Mobject* mob, Vector3 point);
-void mobject_resize_points(Mobject* mob, size_t new_len);
+// Returns 1 on success, 0 on failure
+int mobject_set_points(Mobject* mob, Vector3* points, size_t count);
+int mobject_add_point(Mobject* mob, Vector3 point);
+int mobject_resize_points(Mobject* mob, size_t new_len);
 
 // Mobject Transformations
 void mobject_shift(Mobject* mob, Vector3 vector);

@@ -6,47 +6,47 @@
 
 #define MAX_RECURSION_DEPTH 100
 
-// Helpers
-static void ensure_data_capacity(Mobject* mob, size_t min_cap) {
-    if (mob->data_cap >= min_cap) return;
+// Helpers (Return 1 on success, 0 on failure)
+static int ensure_data_capacity(Mobject* mob, size_t min_cap) {
+    if (mob->data_cap >= min_cap) return 1;
     size_t new_cap = mob->data_cap == 0 ? 8 : mob->data_cap * 2;
     if (new_cap < min_cap) new_cap = min_cap;
 
     void* temp = realloc(mob->data, new_cap * sizeof(PointData));
     if (!temp) {
-        fprintf(stderr, "Failed to allocate memory for points\n");
-        exit(1);
+        return 0;
     }
     mob->data = temp;
     mob->data_cap = new_cap;
+    return 1;
 }
 
-static void ensure_sub_capacity(Mobject* mob, size_t min_cap) {
-    if (mob->sub_cap >= min_cap) return;
+static int ensure_sub_capacity(Mobject* mob, size_t min_cap) {
+    if (mob->sub_cap >= min_cap) return 1;
     size_t new_cap = mob->sub_cap == 0 ? 4 : mob->sub_cap * 2;
     if (new_cap < min_cap) new_cap = min_cap;
 
     void* temp = realloc(mob->submobjects, new_cap * sizeof(Mobject*));
     if (!temp) {
-        fprintf(stderr, "Failed to allocate memory for submobjects\n");
-        exit(1);
+        return 0;
     }
     mob->submobjects = temp;
     mob->sub_cap = new_cap;
+    return 1;
 }
 
-static void ensure_parents_capacity(Mobject* mob, size_t min_cap) {
-    if (mob->parents_cap >= min_cap) return;
+static int ensure_parents_capacity(Mobject* mob, size_t min_cap) {
+    if (mob->parents_cap >= min_cap) return 1;
     size_t new_cap = mob->parents_cap == 0 ? 2 : mob->parents_cap * 2;
     if (new_cap < min_cap) new_cap = min_cap;
 
     void* temp = realloc(mob->parents, new_cap * sizeof(Mobject*));
     if (!temp) {
-        fprintf(stderr, "Failed to allocate memory for parents\n");
-        exit(1);
+        return 0;
     }
     mob->parents = temp;
     mob->parents_cap = new_cap;
+    return 1;
 }
 
 Mobject* mobject_create() {
@@ -59,8 +59,50 @@ Mobject* mobject_create() {
     return mob;
 }
 
+// Detaches mob from all parents and children to prevent use-after-free
+static void mobject_detach(Mobject* mob) {
+    if (!mob) return;
+
+    // Remove mob from all its parents' submobjects lists
+    for (size_t i = 0; i < mob->parents_len; ++i) {
+        Mobject* p = mob->parents[i];
+        if (p) {
+            // Find mob in p->submobjects
+            for (size_t j = 0; j < p->sub_len; ++j) {
+                if (p->submobjects[j] == mob) {
+                    memmove(&p->submobjects[j], &p->submobjects[j+1], (p->sub_len - j - 1) * sizeof(Mobject*));
+                    p->sub_len--;
+                    break;
+                }
+            }
+        }
+    }
+    // Clear parents list
+    mob->parents_len = 0;
+
+    // Remove mob from all its children's parents lists
+    for (size_t i = 0; i < mob->sub_len; ++i) {
+        Mobject* child = mob->submobjects[i];
+        if (child) {
+            // Find mob in child->parents
+            for (size_t j = 0; j < child->parents_len; ++j) {
+                if (child->parents[j] == mob) {
+                    memmove(&child->parents[j], &child->parents[j+1], (child->parents_len - j - 1) * sizeof(Mobject*));
+                    child->parents_len--;
+                    break;
+                }
+            }
+        }
+    }
+    // Clear submobjects list
+    mob->sub_len = 0;
+}
+
+
 void mobject_free(Mobject* mob) {
     if (!mob) return;
+
+    mobject_detach(mob);
 
     if (mob->data) free(mob->data);
     if (mob->submobjects) free(mob->submobjects);
@@ -69,19 +111,21 @@ void mobject_free(Mobject* mob) {
     free(mob);
 }
 
-void mobject_add(Mobject* parent, Mobject* child) {
-    if (!parent || !child) return;
+int mobject_add(Mobject* parent, Mobject* child) {
+    if (!parent || !child) return 0;
 
     // Check if already added
     for (size_t i = 0; i < parent->sub_len; ++i) {
-        if (parent->submobjects[i] == child) return;
+        if (parent->submobjects[i] == child) return 1; // Already added is success? Yes, idempotent.
     }
 
-    ensure_sub_capacity(parent, parent->sub_len + 1);
-    parent->submobjects[parent->sub_len++] = child;
+    if (!ensure_sub_capacity(parent, parent->sub_len + 1)) return 0;
+    if (!ensure_parents_capacity(child, child->parents_len + 1)) return 0;
 
-    ensure_parents_capacity(child, child->parents_len + 1);
+    parent->submobjects[parent->sub_len++] = child;
     child->parents[child->parents_len++] = parent;
+
+    return 1;
 }
 
 void mobject_remove(Mobject* parent, Mobject* child) {
@@ -114,9 +158,10 @@ void mobject_clear(Mobject* parent) {
     }
 }
 
-void mobject_resize_points(Mobject* mob, size_t new_len) {
-    if (!mob) return;
-    ensure_data_capacity(mob, new_len);
+int mobject_resize_points(Mobject* mob, size_t new_len) {
+    if (!mob) return 0;
+    if (!ensure_data_capacity(mob, new_len)) return 0;
+
     if (new_len > mob->data_len) {
         // Init new points
         memset(&mob->data[mob->data_len], 0, (new_len - mob->data_len) * sizeof(PointData));
@@ -128,23 +173,27 @@ void mobject_resize_points(Mobject* mob, size_t new_len) {
         }
     }
     mob->data_len = new_len;
+    return 1;
 }
 
-void mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
-    if (!mob || !points) return;
-    mobject_resize_points(mob, count);
+int mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
+    if (!mob || !points) return 0;
+    if (!mobject_resize_points(mob, count)) return 0;
     for (size_t i = 0; i < count; ++i) {
         mob->data[i].point = points[i];
     }
+    return 1;
 }
 
-void mobject_add_point(Mobject* mob, Vector3 point) {
-    if (!mob) return;
-    ensure_data_capacity(mob, mob->data_len + 1);
+int mobject_add_point(Mobject* mob, Vector3 point) {
+    if (!mob) return 0;
+    if (!ensure_data_capacity(mob, mob->data_len + 1)) return 0;
+
     mob->data[mob->data_len].point = point;
     mob->data[mob->data_len].color = mob->color;
     mob->data[mob->data_len].color.a = mob->opacity;
     mob->data_len++;
+    return 1;
 }
 
 // Recursive helpers with depth check
@@ -257,7 +306,8 @@ void print_mobject_info(Mobject* mob) {
         printf("Mobject is NULL\n");
         return;
     }
-    printf("Mobject at %p\n", (void*)mob);
+    // Removed raw address printing as per security compliance
+    printf("Mobject Info:\n");
     printf("  Points: %zu\n", mob->data_len);
     for (size_t i = 0; i < mob->data_len; ++i) {
         Vector3 p = mob->data[i].point;
