@@ -59,6 +59,11 @@ export class Scene {
         // Find max duration
         const runTime = Math.max(...animations.map(a => a.runTime));
 
+        if (!isFinite(runTime) || runTime <= 0) {
+            console.warn("Scene.play: runTime is invalid (0, negative, or infinite). Skipping animation.");
+            return;
+        }
+
         // Start
         for (const anim of animations) {
             anim.begin();
@@ -75,7 +80,7 @@ export class Scene {
 
         while (t < runTime) {
             t += dt;
-            const alpha = t / runTime;
+            const alpha = Math.min(t / runTime, 1.0);
 
             for (const anim of animations) {
                 anim.interpolate(alpha);

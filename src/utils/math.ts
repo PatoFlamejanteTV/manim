@@ -101,9 +101,6 @@ export function partialQuadraticBezierPoints(points: vec3[], a: number, b: numbe
     // points is [p0, p1, p2]
     // returns [new_p0, new_p1, new_p2]
 
-    if (a === 1.0) {
-        return [points[2], points[2], points[2]];
-    }
     const p0 = points[0];
     const p1 = points[1];
     const p2 = points[2];

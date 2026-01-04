@@ -3,6 +3,12 @@ import { vec3, vec4 } from 'gl-matrix';
 export type Color = string; // Hex string for now
 
 export function hexToRgb(hex: string): vec3 {
+    // Validate input
+    if (!/^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(hex)) {
+        console.warn(`Invalid hex color string: ${hex}. Returning black.`);
+        return vec3.fromValues(0, 0, 0);
+    }
+
     let r = 0, g = 0, b = 0;
     if (hex.length === 4) {
         r = parseInt(hex[1] + hex[1], 16);
