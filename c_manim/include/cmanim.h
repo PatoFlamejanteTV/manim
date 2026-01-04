@@ -80,7 +80,7 @@ Mobject* mobject_create();
 void mobject_free(Mobject* mob);
 
 // Mobject Hierarchy
-// Returns 1 on success, 0 on failure (e.g. allocation error or invalid input)
+// Returns 1 on success, 0 on failure (e.g. allocation error or invalid input or cycle detected)
 int mobject_add(Mobject* parent, Mobject* child);
 void mobject_remove(Mobject* parent, Mobject* child);
 void mobject_clear(Mobject* parent);
@@ -98,7 +98,9 @@ void mobject_rotate(Mobject* mob, float angle, Vector3 axis);
 void mobject_set_color(Mobject* mob, Color color);
 void mobject_set_opacity(Mobject* mob, float opacity);
 
-// Testing helper
+// Debug - can be enabled with -DDEBUG_MANIM
+#ifdef DEBUG_MANIM
 void print_mobject_info(Mobject* mob);
+#endif
 
 #endif // CMANIM_H

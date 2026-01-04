@@ -14,6 +14,7 @@ static int ensure_data_capacity(Mobject* mob, size_t min_cap) {
 
     void* temp = realloc(mob->data, new_cap * sizeof(PointData));
     if (!temp) {
+        fprintf(stderr, "Error: Failed to allocate memory for points\n");
         return 0;
     }
     mob->data = temp;
@@ -28,6 +29,7 @@ static int ensure_sub_capacity(Mobject* mob, size_t min_cap) {
 
     void* temp = realloc(mob->submobjects, new_cap * sizeof(Mobject*));
     if (!temp) {
+        fprintf(stderr, "Error: Failed to allocate memory for submobjects\n");
         return 0;
     }
     mob->submobjects = temp;
@@ -42,6 +44,7 @@ static int ensure_parents_capacity(Mobject* mob, size_t min_cap) {
 
     void* temp = realloc(mob->parents, new_cap * sizeof(Mobject*));
     if (!temp) {
+        fprintf(stderr, "Error: Failed to allocate memory for parents\n");
         return 0;
     }
     mob->parents = temp;
@@ -49,9 +52,21 @@ static int ensure_parents_capacity(Mobject* mob, size_t min_cap) {
     return 1;
 }
 
+// Checks if 'ancestor' is reachable from 'child' via parents (to detect cycles)
+static bool has_ancestor(Mobject* child, Mobject* ancestor) {
+    if (child == ancestor) return true;
+    for (size_t i = 0; i < child->parents_len; ++i) {
+        if (has_ancestor(child->parents[i], ancestor)) return true;
+    }
+    return false;
+}
+
 Mobject* mobject_create() {
     Mobject* mob = calloc(1, sizeof(Mobject));
-    if (!mob) return NULL;
+    if (!mob) {
+        fprintf(stderr, "Error: Failed to allocate Mobject\n");
+        return NULL;
+    }
 
     mob->color = WHITE;
     mob->opacity = 1.0f;
@@ -112,34 +127,29 @@ void mobject_free(Mobject* mob) {
 }
 
 int mobject_add(Mobject* parent, Mobject* child) {
-    if (!parent || !child) return 0;
+    if (!parent || !child) {
+        fprintf(stderr, "Error: Invalid arguments to mobject_add (NULL)\n");
+        return 0;
+    }
 
-    bool in_parent = false;
+    // Cycle check: If parent is already reachable from child (child -> ... -> parent),
+    // then adding child to parent (parent -> child) creates a cycle.
+    if (has_ancestor(parent, child)) {
+        fprintf(stderr, "Error: Cycle detected. Cannot add child to parent.\n");
+        return 0;
+    }
+
+    // Check if already added
     for (size_t i = 0; i < parent->sub_len; ++i) {
-        if (parent->submobjects[i] == child) {
-            in_parent = true;
-            break;
-        }
+        if (parent->submobjects[i] == child) return 1;
     }
 
-    bool in_child = false;
-    for (size_t i = 0; i < child->parents_len; ++i) {
-        if (child->parents[i] == parent) {
-            in_child = true;
-            break;
-        }
-    }
+    if (!ensure_sub_capacity(parent, parent->sub_len + 1)) return 0;
+    if (!ensure_parents_capacity(child, child->parents_len + 1)) return 0;
 
-    if (in_parent && in_child) return 1;
+    parent->submobjects[parent->sub_len++] = child;
+    child->parents[child->parents_len++] = parent;
 
-    if (!in_parent) {
-        if (!ensure_sub_capacity(parent, parent->sub_len + 1)) return 0;
-        parent->submobjects[parent->sub_len++] = child;
-    }
-    if (!in_child) {
-        if (!ensure_parents_capacity(child, child->parents_len + 1)) return 0;
-        child->parents[child->parents_len++] = parent;
-    }
     return 1;
 }
 
@@ -176,11 +186,9 @@ void mobject_clear(Mobject* parent) {
 int mobject_resize_points(Mobject* mob, size_t new_len) {
     if (!mob) return 0;
     if (!ensure_data_capacity(mob, new_len)) return 0;
-int mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
-    if (!mob) return 0;
-    if (count > 0 && !points) return 0;
 
-    if (!mobject_resize_points(mob, count)) return 0;
+    if (new_len > mob->data_len) {
+        // Init new points
         memset(&mob->data[mob->data_len], 0, (new_len - mob->data_len) * sizeof(PointData));
 
         // Use default color
@@ -194,17 +202,22 @@ int mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
 }
 
 int mobject_set_points(Mobject* mob, Vector3* points, size_t count) {
-    if (!mob || !points) return 0;
+    if (!mob || !points) {
+        fprintf(stderr, "Error: Invalid arguments to mobject_set_points (NULL)\n");
+        return 0;
+    }
     if (!mobject_resize_points(mob, count)) return 0;
     for (size_t i = 0; i < count; ++i) {
         mob->data[i].point = points[i];
     }
     return 1;
-static void mobject_shift_recursive(Mobject* mob, Vector3 vector, int depth) {
-    if (!mob) return;
-    if (depth > MAX_RECURSION_DEPTH) return;
+}
+
 int mobject_add_point(Mobject* mob, Vector3 point) {
-    if (!mob) return 0;
+    if (!mob) {
+        fprintf(stderr, "Error: Invalid arguments to mobject_add_point (NULL)\n");
+        return 0;
+    }
     if (!ensure_data_capacity(mob, mob->data_len + 1)) return 0;
 
     mob->data[mob->data_len].point = point;
@@ -233,7 +246,6 @@ void mobject_shift(Mobject* mob, Vector3 vector) {
 }
 
 static void mobject_scale_recursive(Mobject* mob, float factor, int depth) {
-    if (!mob) return;
     if (depth > MAX_RECURSION_DEPTH) return;
 
     for (size_t i = 0; i < mob->data_len; ++i) {
@@ -253,7 +265,13 @@ static void mobject_rotate_recursive(Mobject* mob, float angle, Vector3 axis, in
     if (depth > MAX_RECURSION_DEPTH) return;
 
     // Axis angle rotation about origin
-    Vector3 k = vec3_normalize(axis);
+    float norm = vec3_norm(axis);
+    if (norm < 1e-6) {
+        fprintf(stderr, "Error: Rotation axis is zero vector.\n");
+        return;
+    }
+
+    Vector3 k = vec3_scale(axis, 1.0f / norm); // Manual normalize to reuse norm check
     float cos_t = cosf(angle);
     float sin_t = sinf(angle);
 
@@ -270,17 +288,13 @@ static void mobject_rotate_recursive(Mobject* mob, float angle, Vector3 axis, in
         float dot = vec3_dot(k, v);
 
         Vector3 term1 = vec3_scale(v, cos_t);
-        static void mobject_set_color_recursive(Mobject* mob, Color color, int depth) {
-            if (!mob) return;
-            if (depth > MAX_RECURSION_DEPTH) return;
+        Vector3 term2 = vec3_scale(cross, sin_t);
+        Vector3 term3 = vec3_scale(k, dot * (1 - cos_t));
 
-            // Keep opacity authoritative; apply RGB while preserving alpha
-            mob->color = (Color){color.r, color.g, color.b, mob->opacity};
+        mob->data[i].point = vec3_add(term1, vec3_add(term2, term3));
+    }
 
-            for (size_t i = 0; i < mob->data_len; ++i) {
-                float a = mob->data[i].color.a;
-                mob->data[i].color = (Color){color.r, color.g, color.b, a};
-            }
+    for (size_t i = 0; i < mob->sub_len; ++i) {
         mobject_rotate_recursive(mob->submobjects[i], angle, axis, depth + 1);
     }
 }
@@ -293,9 +307,18 @@ void mobject_rotate(Mobject* mob, float angle, Vector3 axis) {
 static void mobject_set_color_recursive(Mobject* mob, Color color, int depth) {
     if (depth > MAX_RECURSION_DEPTH) return;
 
-    mob->color = color;
+    // Preserve opacity from previous color
+    mob->color.r = color.r;
+    mob->color.g = color.g;
+    mob->color.b = color.b;
+    // Don't overwrite opacity with color.a if the user only supplied RGB-like intention
+    // But color struct has a. In Python manim, set_color usually preserves opacity.
+
     for (size_t i = 0; i < mob->data_len; ++i) {
-        mob->data[i].color = color;
+        mob->data[i].color.r = color.r;
+        mob->data[i].color.g = color.g;
+        mob->data[i].color.b = color.b;
+        // Preserve opacity
     }
     for (size_t i = 0; i < mob->sub_len; ++i) {
         mobject_set_color_recursive(mob->submobjects[i], color, depth + 1);
@@ -321,17 +344,15 @@ static void mobject_set_opacity_recursive(Mobject* mob, float opacity, int depth
 
 void mobject_set_opacity(Mobject* mob, float opacity) {
     if (!mob) return;
-    if (opacity < 0.0f) opacity = 0.0f;
-    if (opacity > 1.0f) opacity = 1.0f;
     mobject_set_opacity_recursive(mob, opacity, 0);
 }
 
+#ifdef DEBUG_MANIM
 void print_mobject_info(Mobject* mob) {
     if (!mob) {
         printf("Mobject is NULL\n");
         return;
     }
-    // Removed raw address printing as per security compliance
     printf("Mobject Info:\n");
     printf("  Points: %zu\n", mob->data_len);
     for (size_t i = 0; i < mob->data_len; ++i) {
@@ -340,3 +361,4 @@ void print_mobject_info(Mobject* mob) {
     }
     printf("  Submobjects: %zu\n", mob->sub_len);
 }
+#endif

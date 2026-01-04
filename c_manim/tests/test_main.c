@@ -125,6 +125,27 @@ void test_mobject_free_detach() {
     printf("Mobject Free Detach Passed.\n");
 }
 
+void test_cycle_detection() {
+    printf("Testing Cycle Detection...\n");
+    Mobject* a = mobject_create();
+    Mobject* b = mobject_create();
+    Mobject* c = mobject_create();
+
+    // A -> B
+    ASSERT_EQ(mobject_add(a, b), 1);
+    // B -> C
+    ASSERT_EQ(mobject_add(b, c), 1);
+    // C -> A (Cycle!)
+    ASSERT_EQ(mobject_add(c, a), 0);
+
+    // Self loop
+    ASSERT_EQ(mobject_add(a, a), 0);
+
+    mobject_free(a);
+    mobject_free(b);
+    mobject_free(c);
+    printf("Cycle Detection Passed.\n");
+}
 
 void test_mobject_transform() {
     printf("Testing Mobject Transform...\n");
@@ -204,7 +225,8 @@ int main() {
     test_mobject_lifecycle();
     test_mobject_points();
     test_mobject_hierarchy();
-    test_mobject_free_detach(); // New test
+    test_mobject_free_detach();
+    test_cycle_detection(); // New test
     test_mobject_transform();
     test_hierarchy_transform();
     test_color_opacity();
