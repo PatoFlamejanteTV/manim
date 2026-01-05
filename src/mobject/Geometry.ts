@@ -250,12 +250,18 @@ export class Line extends TipableVMobject {
     ) {
         super(options);
 
-        const buff = options.buff || 0;
+        let buff = options.buff || 0;
         // Apply buff
         // Vector start->end
         const v = vec3.create();
         vec3.subtract(v, end, start);
         const length = getNorm(v);
+
+        if (length <= 0) {
+            buff = 0;
+        } else {
+            buff = Math.max(0, Math.min(buff, length / 2));
+        }
 
         const u = vec3.create();
         if (length > 0) {
@@ -388,20 +394,13 @@ export class Ellipse extends Circle {
 
         // Actually Circle constructor already scales by radius.
         // Let's assume r=1 (diameter 2).
-        this.scale(width / 2.0, vec3.fromValues(1, 0, 0)); // Scale X
-        this.scale(height / 2.0, vec3.fromValues(0, 1, 0)); // Scale Y
-        // Wait, scale(factor, aboutPoint) scales uniformly.
-        // We need non-uniform scale or stretch.
-        // I haven't implemented `stretch`.
-        // Let's implement non-uniform scale in Mobject or just hack it here via applyPointsFunction.
+
+        const sx = width / 2.0;
+        const sy = height / 2.0;
+
+        const center = this.getCenter();
+        this.applyPointsFunction(p => vec3.fromValues(p[0] * sx, p[1] * sy, p[2]), center);
     }
-
-    // Override scale to support 3D vector scale? Mobject.scale takes number.
-    // Let's implement stretch-like behavior locally for now.
-
-    // Actually, Mobject.scale takes number. I need stretch.
-    // I will add stretch to Mobject or VMobject later.
-    // For now, let's manually transform points.
 }
 
 // --- Dot ---

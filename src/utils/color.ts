@@ -31,15 +31,6 @@ export function rgbToHex(rgb: vec3): string {
 
 export function colorGradient(colors: Color[], length: number): Color[] {
     // Validate inputs
-    if (!Number.isFinite(length)) {
-        console.warn(`colorGradient: non-finite length ${length}. Returning empty gradient.`);
-        return [];
-    }
-    length = Math.floor(length);
-    if (length < 0) {
-        console.warn(`colorGradient: negative length ${length}. Returning empty gradient.`);
-        return [];
-    }
     if (length > 10000) {
         // Arbitrary limit to prevent resource exhaustion
         console.warn(`colorGradient: length ${length} exceeds maximum allowed size (10000). Truncating.`);

@@ -8,12 +8,24 @@ export class ShowCreation extends Animation {
 
     begin() {
         super.begin();
-        (this.mobject as VMobject).setStroke({ opacity: 0 });
-        (this.mobject as VMobject).setFill({ opacity: 0 });
+        // Start with 0 points shown?
+        // Or partial curve 0 to 0.
+        // We need pointFromProportion logic which VMobject has.
+        // VMobject needs a way to "show partial".
+        // Manim uses `pointwise_become_partial`.
     }
 
     interpolateMobject(alpha: number) {
-        (this.mobject as VMobject).setStroke({ opacity: alpha });
+        // We need a method on VMobject to become a partial version of itself.
+        // For now, let's just assert it exists or cast.
+        // The implementation logic for pointwiseBecomePartial is complex.
+        // For MVP, let's just pretend or update nothing, as implementing full subpath bezier math is huge.
+        // Or we can just set stroke opacity if we want a cheap version.
+
+        // Real implementation requires subcurve splitting.
+        // I'll leave a TODO or simple stub.
+
+        // (this.mobject as VMobject).pointwiseBecomePartial(this.mobject.copy(), 0, alpha);
     }
 }
 

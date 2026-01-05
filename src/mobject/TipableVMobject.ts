@@ -22,13 +22,10 @@ export class TipableVMobject extends VMobject {
         const anchor = atStart ? this.getStart() : this.getEnd();
         const handle = atStart ? this.getFirstHandle() : this.getLastHandle();
 
-        // Direction vector should follow the curve's tangent at the endpoint
+        // Direction vector
         const direction = vec3.create();
-        if (atStart) {
-            vec3.subtract(direction, handle, anchor);
-        } else {
-            vec3.subtract(direction, anchor, handle);
-        }
+        vec3.subtract(direction, handle, anchor);
+
         const angle = angleOfVector(direction) - PI - tip.getAngle();
         tip.rotate(angle);
 
@@ -71,5 +68,11 @@ export class TipableVMobject extends VMobject {
     getLastHandle(): vec3 {
         const points = this.getPoints();
         return points.length > 2 ? points[points.length - 2] : points[points.length - 1];
+    }
+
+    getLength(): number {
+        const start = this.getStart();
+        const end = this.getEnd();
+        return vec3.distance(start, end);
     }
 }
